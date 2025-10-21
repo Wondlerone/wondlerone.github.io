@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wondle ROI Calculator</title>
+  <title>Fleet Damage Calculator</title>
   <style>
     * {
       box-sizing: border-box;
@@ -118,6 +118,58 @@
       gap: calc(var(--spacing) * 2);
     }
 
+    .info-button {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-blue);
+      color: var(--color-white);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: help;
+      flex-shrink: 0;
+    }
+
+    .info-button:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .tooltip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-heading);
+      color: var(--color-white);
+      padding: calc(var(--spacing) * 3);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 400;
+      white-space: normal;
+      width: 250px;
+      z-index: 1000;
+      transition: opacity 0.3s;
+      line-height: 1.4;
+      text-align: left;
+    }
+
+    .tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--color-heading);
+    }
+
     .input-value {
       font-size: 14px;
       font-weight: 600;
@@ -199,11 +251,6 @@
       border-color: #fde68a;
     }
 
-    .result-card.rose {
-      background: #fff1f2;
-      border-color: #fecdd3;
-    }
-
     .result-label {
       font-size: 14px;
       font-weight: 500;
@@ -236,95 +283,7 @@
     .total-value {
       font-size: 56px;
       font-weight: 700;
-      margin-bottom: calc(var(--spacing) * 4);
-    }
-
-    .total-description {
-      font-size: 14px;
-      opacity: 0.8;
-    }
-
-    .tabs-container {
-      display: flex;
-      justify-content: center;
-      margin-bottom: calc(var(--spacing) * 8);
-      gap: calc(var(--spacing) * 2);
-    }
-
-    .tab-button {
-      font-family: 'Satoshi', sans-serif;
-      font-size: 16px;
-      font-weight: 500;
-      padding: calc(var(--spacing) * 3) calc(var(--spacing) * 6);
-      border: 2px solid var(--color-disabled);
-      background: var(--color-white);
-      color: var(--color-heading);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .tab-button:hover {
-      border-color: var(--color-blue);
-      color: var(--color-blue);
-    }
-
-    .tab-button.active {
-      background: var(--color-blue);
-      border-color: var(--color-blue);
-      color: var(--color-white);
-    }
-
-    .info-button {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--color-blue);
-      color: var(--color-white);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: help;
-      flex-shrink: 0;
-    }
-
-    .info-button:hover .tooltip {
-      visibility: visible;
-      opacity: 1;
-    }
-
-    .tooltip {
-      visibility: hidden;
-      opacity: 0;
-      position: absolute;
-      bottom: 125%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--color-heading);
-      color: var(--color-white);
-      padding: calc(var(--spacing) * 3);
-      border-radius: var(--radius-sm);
-      font-size: 12px;
-      font-weight: 400;
-      white-space: normal;
-      width: 250px;
-      z-index: 1000;
-      transition: opacity 0.3s;
-      line-height: 1.4;
-      text-align: left;
-    }
-
-    .tooltip::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 6px solid transparent;
-      border-top-color: var(--color-heading);
+      margin-bottom: calc(var(--spacing) * 6);
     }
 
     .benefits-list {
@@ -420,165 +379,6 @@
         <div className={`result-card ${color}`}>
           <p className="result-label">{label}</p>
           <p className="result-value">{formatCurrency(value)}</p>
-        </div>
-      );
-    }
-
-    function DamageCalculator() {
-      const [vehiclesReturned, setVehiclesReturned] = useState(20000);
-      const [damageComplaintRate, setDamageComplaintRate] = useState(15);
-      const [handlingCost, setHandlingCost] = useState(150);
-      const [goodwillPayment, setGoodwillPayment] = useState(175);
-      const [complaintsAvoided, setComplaintsAvoided] = useState(30);
-      const [unreportedDamageRate, setUnreportedDamageRate] = useState(4);
-      const [repairDelayDays, setRepairDelayDays] = useState(30);
-      const [holdingCostPerDay, setHoldingCostPerDay] = useState(25);
-      const [damageReduction, setDamageReduction] = useState(30);
-
-      const totalComplaints = vehiclesReturned * (damageComplaintRate / 100);
-      const complaintsReduced = totalComplaints * (complaintsAvoided / 100);
-      const savingsFromComplaints = complaintsReduced * handlingCost;
-      const savingsFromGoodwill = complaintsReduced * goodwillPayment;
-
-      const unreportedDamageCases = vehiclesReturned * (unreportedDamageRate / 100);
-      const damageReductionCases = unreportedDamageCases * (damageReduction / 100);
-      const savingsFromRemarketing = damageReductionCases * repairDelayDays * holdingCostPerDay;
-
-      const totalSavings = savingsFromComplaints + savingsFromGoodwill + savingsFromRemarketing;
-
-      return (
-        <div className="container">
-          <div className="header">
-            <h1>Wondle ROI Calculator</h1>
-            <p>Calculate ballpark savings for your leasing company.</p>
-          </div>
-
-          <div className="grid">
-            <div>
-              <div className="card">
-                <h2>Input Parameters</h2>
-
-                <SliderInput
-                  label="Vehicles Returned Per Year"
-                  value={vehiclesReturned}
-                  onChange={setVehiclesReturned}
-                  min={0}
-                  max={50000}
-                  step={500}
-                />
-
-                <SliderInput
-                  label="Damage Complaint Rate (%)"
-                  value={damageComplaintRate}
-                  onChange={setDamageComplaintRate}
-                  min={0}
-                  max={50}
-                  step={0.5}
-                  suffix="%"
-                />
-
-                <SliderInput
-                  label="Handling Cost Per Damage Complaint (£)"
-                  value={handlingCost}
-                  onChange={setHandlingCost}
-                  min={0}
-                  max={500}
-                  step={10}
-                />
-
-                <SliderInput
-                  label="Average Damage Goodwill Payment (£)"
-                  value={goodwillPayment}
-                  onChange={setGoodwillPayment}
-                  min={0}
-                  max={1000}
-                  step={25}
-                />
-
-                <SliderInput
-                  label="Damage Complaints Avoided (%) - You can expect 30% reduction with Wondle"
-                  value={complaintsAvoided}
-                  onChange={setComplaintsAvoided}
-                  min={10}
-                  max={50}
-                  step={1}
-                  suffix="%"
-                />
-
-                <div className="divider"></div>
-
-                <SliderInput
-                  label="Unreported Accident Damage Rate (%)"
-                  value={unreportedDamageRate}
-                  onChange={setUnreportedDamageRate}
-                  min={0}
-                  max={20}
-                  step={0.5}
-                  suffix="%"
-                />
-
-                <SliderInput
-                  label="Average Days Delay for Repair"
-                  value={repairDelayDays}
-                  onChange={setRepairDelayDays}
-                  min={0}
-                  max={60}
-                  step={1}
-                />
-
-                <SliderInput
-                  label="Holding Cost Per Day (£)"
-                  value={holdingCostPerDay}
-                  onChange={setHoldingCostPerDay}
-                  min={0}
-                  max={100}
-                  step={5}
-                />
-
-                <SliderInput
-                  label="Reduced Unreported Accident Damage (%)"
-                  value={damageReduction}
-                  onChange={setDamageReduction}
-                  min={10}
-                  max={50}
-                  step={1}
-                  suffix="%"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="card">
-                <h2>Results</h2>
-
-                <ResultCard
-                  label="Savings from Complaints"
-                  value={savingsFromComplaints}
-                  color="blue"
-                />
-
-                <ResultCard
-                  label="Savings from Goodwill"
-                  value={savingsFromGoodwill}
-                  color="amber"
-                />
-
-                <ResultCard
-                  label="Savings from Delayed Remarketing"
-                  value={savingsFromRemarketing}
-                  color="rose"
-                />
-              </div>
-
-              <div className="total-card">
-                <p className="total-label">Total Annual Savings</p>
-                <p className="total-value">{formatCurrency(totalSavings)}</p>
-                <p className="total-description">
-                  With {complaintsAvoided}% complaints avoided and {damageReduction}% damage reduction
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       );
     }
@@ -713,31 +513,7 @@
       );
     }
 
-    function App() {
-      const [activeTool, setActiveTool] = useState('leasing');
-
-      return (
-        <>
-          <div className="tabs-container">
-            <button
-              className={`tab-button ${activeTool === 'leasing' ? 'active' : ''}`}
-              onClick={() => setActiveTool('leasing')}
-            >
-              Leasing Company Calculator
-            </button>
-            <button
-              className={`tab-button ${activeTool === 'fleet' ? 'active' : ''}`}
-              onClick={() => setActiveTool('fleet')}
-            >
-              Fleet Damage Calculator
-            </button>
-          </div>
-          {activeTool === 'leasing' ? <DamageCalculator /> : <FleetDamageCalculator />}
-        </>
-      );
-    }
-
-    ReactDOM.render(<App />, document.getElementById('root'));
+    ReactDOM.render(<FleetDamageCalculator />, document.getElementById('root'));
   </script>
 </body>
 </html>
