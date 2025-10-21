@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fleet Damage Calculator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --color-heading: #1F2124;
+      --color-subtle: #9197A1;
+      --color-disabled: #E1E3E5;
+      --color-blue: #008BF8;
+      --color-white: #fff;
+      --spacing: 0.25rem;
+      --radius-sm: 0.25rem;
+      --radius-lg: 0.5rem;
+    }
+
+    body {
+      font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      min-height: 100vh;
+      padding: calc(var(--spacing) * 8);
+      color: var(--color-heading);
+    }
+
+    h1 {
+      font-family: 'Khand', sans-serif;
+      font-weight: 700;
+      font-size: 48px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: calc(var(--spacing) * 3);
+    }
+
+    h2 {
+      font-family: 'Khand', sans-serif;
+      font-weight: 700;
+      font-size: 32px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: calc(var(--spacing) * 6);
+    }
+
+    h3 {
+      font-family: 'Satoshi', sans-serif;
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.5;
+      margin-bottom: calc(var(--spacing) * 4);
+    }
+
+    p {
+      font-family: 'Satoshi', sans-serif;
+      font-size: 18px;
+      line-height: 1.6;
+      color: var(--color-subtle);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: calc(var(--spacing) * 12);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: calc(var(--spacing) * 8);
+    }
+
+    @media (min-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      h1 {
+        font-size: 72px;
+      }
+      h2 {
+        font-size: 40px;
+      }
+    }
+
+    .card {
+      background: var(--color-white);
+      border-radius: var(--radius-lg);
+      padding: calc(var(--spacing) * 8);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .input-group {
+      margin-bottom: calc(var(--spacing) * 8);
+    }
+
+    .input-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: calc(var(--spacing) * 3);
+    }
+
+    .input-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-heading);
+      display: flex;
+      align-items: center;
+      gap: calc(var(--spacing) * 2);
+    }
+
+    .info-button {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-blue);
+      color: var(--color-white);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: help;
+      flex-shrink: 0;
+    }
+
+    .info-button:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .tooltip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-heading);
+      color: var(--color-white);
+      padding: calc(var(--spacing) * 3);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 400;
+      white-space: normal;
+      width: 250px;
+      z-index: 1000;
+      transition: opacity 0.3s;
+      line-height: 1.4;
+      text-align: left;
+    }
+
+    .tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--color-heading);
+    }
+
+    .input-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-blue);
+      padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+      background: #f8f9fa;
+      border-radius: var(--radius-sm);
+      min-width: 80px;
+      text-align: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: var(--color-disabled);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--color-blue);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: var(--color-blue);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.2s;
+    }
+
+    input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: calc(var(--spacing) * 2);
+      font-size: 12px;
+      color: var(--color-subtle);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--color-disabled);
+      margin: calc(var(--spacing) * 8) 0;
+    }
+
+    .result-card {
+      padding: calc(var(--spacing) * 6);
+      border-radius: var(--radius-lg);
+      margin-bottom: calc(var(--spacing) * 4);
+      border: 2px solid;
+    }
+
+    .result-card.blue {
+      background: #f0f9ff;
+      border-color: #bfdbfe;
+    }
+
+    .result-card.amber {
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+
+    .result-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-subtle);
+      margin-bottom: calc(var(--spacing) * 2);
+    }
+
+    .result-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--color-heading);
+    }
+
+    .total-card {
+      background: linear-gradient(135deg, var(--color-heading) 0%, #2d3135 100%);
+      color: var(--color-white);
+      padding: calc(var(--spacing) * 8);
+      border-radius: var(--radius-lg);
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(31, 33, 36, 0.2);
+    }
+
+    .total-label {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: calc(var(--spacing) * 2);
+      opacity: 0.9;
+    }
+
+    .total-value {
+      font-size: 56px;
+      font-weight: 700;
+      margin-bottom: calc(var(--spacing) * 6);
+    }
+
+    .benefits-list {
+      text-align: left;
+      padding: calc(var(--spacing) * 6) calc(var(--spacing) * 8);
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      margin-top: calc(var(--spacing) * 6);
+    }
+
+    .benefits-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: calc(var(--spacing) * 4);
+      text-align: center;
+    }
+
+    .benefit-item {
+      font-size: 14px;
+      padding: calc(var(--spacing) * 2) 0;
+      opacity: 0.95;
+      display: flex;
+      align-items: center;
+      gap: calc(var(--spacing) * 2);
+    }
+
+    .benefit-item::before {
+      content: "+";
+      font-size: 18px;
+      font-weight: 700;
+      color: #4ade80;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value);
+    }
+
+    function InfoButton({ text }) {
+      return (
+        <div className="info-button">
+          i
+          <div className="tooltip">{text}</div>
+        </div>
+      );
+    }
+
+    function SliderInput({ label, value, onChange, min, max, step, suffix = '', infoText = null }) {
+      return (
+        <div className="input-group">
+          <div className="input-header">
+            <label className="input-label">
+              {label}
+              {infoText && <InfoButton text={infoText} />}
+            </label>
+            <div className="input-value">
+              {typeof value === 'number' ? value.toLocaleString() : value}{suffix}
+            </div>
+          </div>
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+          />
+          <div className="range-labels">
+            <span>{min.toLocaleString()}</span>
+            <span>{max.toLocaleString()}</span>
+          </div>
+        </div>
+      );
+    }
+
+    function ResultCard({ label, value, color }) {
+      return (
+        <div className={`result-card ${color}`}>
+          <p className="result-label">{label}</p>
+          <p className="result-value">{formatCurrency(value)}</p>
+        </div>
+      );
+    }
+
+    function FleetDamageCalculator() {
+      const [numVehicles, setNumVehicles] = useState(500);
+      const [endOfContractDamageCost, setEndOfContractDamageCost] = useState(600);
+      const [unreportedFNOLRate, setUnreportedFNOLRate] = useState(5);
+      const [unreportedFNOLCost, setUnreportedFNOLCost] = useState(1500);
+      const [damageReduction, setDamageReduction] = useState(25);
+
+      // Calculate savings from end of contract damage
+      const endOfContractSavings = numVehicles * endOfContractDamageCost * (damageReduction / 100);
+
+      // Calculate savings from unreported FNOLs
+      const numFNOLs = numVehicles * (unreportedFNOLRate / 100);
+      const fnolSavings = numFNOLs * unreportedFNOLCost * (damageReduction / 100);
+
+      // Total savings
+      const totalSavings = endOfContractSavings + fnolSavings;
+
+      const benefits = [
+        "a safer fleet",
+        "a quicker experience",
+        "pool management",
+        "audit trail",
+        "insight reporting on damage",
+        "query and complaint evidence for leasing company disputes"
+      ];
+
+      return (
+        <div className="container">
+          <div className="header">
+            <h1>Fleet Damage Calculator</h1>
+            <p>Calculate potential savings by managing minor damage in your fleet.</p>
+          </div>
+
+          <div className="grid">
+            <div>
+              <div className="card">
+                <h2>Input Parameters</h2>
+
+                <SliderInput
+                  label="Number of Vehicles"
+                  value={numVehicles}
+                  onChange={setNumVehicles}
+                  min={0}
+                  max={5000}
+                  step={50}
+                />
+
+                <SliderInput
+                  label="Average End of Contract Damage Cost (£)"
+                  value={endOfContractDamageCost}
+                  onChange={setEndOfContractDamageCost}
+                  min={0}
+                  max={2000}
+                  step={50}
+                />
+
+                <div className="divider"></div>
+
+                <SliderInput
+                  label="Unreported FNOL Rate (%)"
+                  value={unreportedFNOLRate}
+                  onChange={setUnreportedFNOLRate}
+                  min={0}
+                  max={20}
+                  step={0.5}
+                  suffix="%"
+                  infoText="This is normally set around 5% but could be as high as 20% in some fleets"
+                />
+
+                <SliderInput
+                  label="Unreported FNOL Cost (£)"
+                  value={unreportedFNOLCost}
+                  onChange={setUnreportedFNOLCost}
+                  min={0}
+                  max={5000}
+                  step={100}
+                  infoText="Includes additional downtime, admin costs, insurance premium impact, and other indirect costs"
+                />
+
+                <div className="divider"></div>
+
+                <SliderInput
+                  label="Reduction by Managing Minor Damage (%)"
+                  value={damageReduction}
+                  onChange={setDamageReduction}
+                  min={0}
+                  max={50}
+                  step={5}
+                  suffix="%"
+                  infoText="This is usually estimated at 25% but could be up to 50% in some cases"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="card">
+                <h2>Results</h2>
+
+                <ResultCard
+                  label="Savings from End of Contract Damage"
+                  value={endOfContractSavings}
+                  color="blue"
+                />
+
+                <ResultCard
+                  label="Savings from Unreported FNOLs"
+                  value={fnolSavings}
+                  color="amber"
+                />
+              </div>
+
+              <div className="total-card">
+                <p className="total-label">Total Annual Savings</p>
+                <p className="total-value">{formatCurrency(totalSavings)}</p>
+
+                <div className="benefits-list">
+                  <p className="benefits-title">Additional Benefits</p>
+                  {benefits.map((benefit, index) => (
+                    <div key={index} className="benefit-item">
+                      {benefit}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<FleetDamageCalculator />, document.getElementById('root'));
+  </script>
+</body>
+</html>
