@@ -82,6 +82,11 @@
     @media (min-width: 1024px) {
       .grid {
         grid-template-columns: 1fr 1fr;
+        align-items: start;
+      }
+      .grid > div:last-child {
+        position: sticky;
+        top: calc(var(--spacing) * 8);
       }
       h1 {
         font-size: 72px;
