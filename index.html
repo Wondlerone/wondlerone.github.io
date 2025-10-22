@@ -513,22 +513,24 @@
                 <div className="divider"></div>
 
                 <SliderInput
-                  label="Unreported Accident Damage Rate (%)"
+                  label="Vehicles Returned with an Open Insurance Claim (%)"
                   value={unreportedDamageRate}
                   onChange={setUnreportedDamageRate}
                   min={0}
                   max={20}
                   step={0.5}
                   suffix="%"
+                  infoText="Percentage of vehicles returned with accident damage where insurance claims commence prior to return"
                 />
 
                 <SliderInput
-                  label="Average Days Delay for Repair"
+                  label="Average Days Delay for Accident Damage Repair"
                   value={repairDelayDays}
                   onChange={setRepairDelayDays}
                   min={0}
                   max={60}
                   step={1}
+                  infoText="Average number of days a vehicle is held while waiting for accident damage repairs to be completed"
                 />
 
                 <SliderInput
@@ -541,13 +543,14 @@
                 />
 
                 <SliderInput
-                  label="Reduced Unreported Accident Damage (%)"
+                  label="Reduction in Vehicles Returned with Accident Damage (%)"
                   value={damageReduction}
                   onChange={setDamageReduction}
                   min={10}
                   max={50}
                   step={1}
                   suffix="%"
+                  infoText="Expected percentage reduction in vehicles returned with accident damage by using this tool to identify and repair damage earlier"
                 />
               </div>
             </div>
