@@ -40,6 +40,8 @@ body{background:var(--hx-bg); color:var(--hx-text); font-family:-apple-system,Bl
 .hx-btn{appearance:none; flex:1; min-width:0; padding:16px 12px; border-radius:40px; border:1px solid var(--hx-btn); background:var(--hx-btn); color:var(--hx-btn-ink); font:inherit; font-size:18px; font-weight:700; cursor:pointer}
 .hx-started{display:flex; flex-direction:column; gap:6px; padding:18px; border-radius:12px; border:1px solid var(--hx-line); background:var(--hx-card)}
 .hx-started h2{margin:0; font-size:20px}
+.hx-sent{margin:6px 0 0; padding:10px 12px; border-radius:8px; background:var(--hx-bg); font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; white-space:pre-wrap; word-break:break-all}
+.hx-sent:empty{display:none}
 .hx-started p,.hx-note{margin:0; color:var(--hx-sub); font-size:14px; line-height:1.45}
 .hx-on #wondle-pre-scan{top:calc(48px + env(safe-area-inset-top,0px))}
 
@@ -143,6 +145,14 @@ body[class*="octopus"] #wondle-pre-scan{
 #wondle-pre-scan .wps-sendoff p{font-size:19px; line-height:1.7}
 .wps-line{animation:wps-line-in .5s ease-out var(--wps-delay,0s) both}
 @keyframes wps-line-in{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+/* Send-off choices: hidden until the last point has been read. */
+.wps-ack{display:flex; flex-direction:column; gap:10px; margin-top:6px; opacity:0; transform:translateY(8px); transition:opacity .4s ease-out, transform .4s ease-out}
+.wps-ack.is-ready{opacity:1; transform:none}
+#wondle-pre-scan .wps-ack-yes.is-on{border-color:var(--wps-ok); background:var(--wps-ok-soft)}
+.wps-ack-yes.is-on .wps-dot{border-color:var(--wps-ok); background:var(--wps-ok)}
+.wps-ack-yes.is-on .wps-dot::before{content:"\2713"}
+#wondle-pre-scan .wps-again{appearance:none; align-self:center; margin:0; padding:10px 12px; border:0; background:none; color:var(--wps-anchor); font-size:16px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer}
+@media (prefers-reduced-motion: reduce){ .wps-ack{transition:none; transform:none} }
 /* [Yes] in the copy is drawn as the button drivers press during the scan. */
 .wps-yes{display:inline-block; padding:0 11px; border-radius:999px; background:var(--wps-anchor); color:#ffffff; font-size:.9em; font-weight:800; line-height:1.5; white-space:nowrap}
 
@@ -266,8 +276,9 @@ body[class*="octopus"] #wondle-pre-scan{
   <div class="hx-started" id="hx-started" hidden>
     <h2 id="hx-started-h">Scan starting</h2>
     <p id="hx-started-p">In the live app the form submits at this point: one credit is used and the camera opens.</p>
+    <pre class="hx-sent" id="hx-sent"></pre>
   </div>
-  <p class="hx-note">This page stands in for the new-scan page. The checks open in front of it when Scan Now is tapped. Upload Now goes straight through. Slot labels such as 1A match the shot list.</p>
+  <p class="hx-note">This page stands in for the new-scan page. The checks open in front of it when Scan Now is tapped. Upload Now goes straight through, and Octopus shows Scan Now only. Slot labels such as 1A match the shot list.</p>
 </main>
 
 <script>
@@ -287,6 +298,15 @@ body[class*="octopus"] #wondle-pre-scan{
    Only Scan Now is gated; Upload Now goes straight through. Both buttons share
    id="start-scan", so it matches on the button's value, not on the id.
    Any error removes the checks and leaves the scan buttons working.
+
+   When the driver confirms on the send-off screen, these hidden fields are added to
+   the form before Scan Now is re-sent, so they post with the new scan:
+       prescan[completed]        1
+       prescan[version]          content version shown, e.g. 2026-10-18.1
+       prescan[acknowledged_at]  device time, ISO 8601 (stamp server time as well)
+       prescan[repeats]          times the driver chose to run through it again
+   A scan posted without prescan[completed] did not pass the checks (an error
+   switched them off, or the page did not load them).
    ============================================================ */
 (function (window, document) {
   'use strict';
@@ -296,10 +316,15 @@ body[class*="octopus"] #wondle-pre-scan{
      An option's points name the highlighted phrases it relates to; tapping it re-pops
      them, red for a wrong answer and green for a right one. */
   var CONTENT = {
-    version: '2026-10-17.10',
+    version: '2026-10-18.1',
     imgBase: 'img/prescan/', // live: '/themes/wondle/img/prescan/'
     showSlotIds: true, // prototype only: labels each image slot to match the shot list
-    intro: { title: 'Before you scan', body: ['Four quick steps. About a minute.'], cta: 'Start' },
+    intro: {
+      title: 'Before you scan',
+      body: ['We’ll show you how to photograph your car for the scan.', 'There are four short steps, each with a quick question. It takes about a minute.'],
+      items: ['The right conditions', 'Photographing a panel', 'The damage question', 'Close-ups of damage'],
+      cta: 'Start'
+    },
     steps: [
       {
         id: 'conditions', type: 'pick', layout: 'quad',
@@ -368,6 +393,8 @@ body[class*="octopus"] #wondle-pre-scan{
           'If we find damage and you disagree, you can *easily remove it* when you get your report.',
           'If you don\u2019t photograph it and it\u2019s found at inspection, *you\u2019ll be billed afterwards*. There\u2019s no advantage in taking the chance.'
         ],
+        confirm: 'I understand. I know what to do.', // unlocks Start scan
+        repeat: 'Let’s run through it again.', // back to step 1
         cta: 'Start scan'
       }
     ]
@@ -394,7 +421,7 @@ body[class*="octopus"] #wondle-pre-scan{
   /* ---- Engine ---- */
   var steps = CONTENT.steps, root = null, ui = {}, cfg = {}, st = null;
 
-  function fresh() { return { i: 0, solved: false, selected: {}, seen: {}, panel: 0, busy: false, trigger: null, passed: false, ready: false, timer: 0, timer2: 0 }; }
+  function fresh() { return { i: 0, solved: false, selected: {}, seen: {}, panel: 0, busy: false, trigger: null, passed: false, ready: false, acked: false, repeats: 0, timer: 0, timer2: 0 }; }
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
@@ -474,6 +501,8 @@ body[class*="octopus"] #wondle-pre-scan{
     else if (act === 'opt') choose(i);
     else if (act === 'yes' || act === 'no') answer(i, act === 'yes');
     else if (act === 'zoom') zoom(i);
+    else if (act === 'ack') acknowledge();
+    else if (act === 'again') again();
     else if (act === 'unzoom') unzoom();
   }
   function onKey(e) {
@@ -486,11 +515,13 @@ body[class*="octopus"] #wondle-pre-scan{
     return '<div class="wps-copy">' + body.map(function (p) { return '<p>' + fmt(p) + '</p>'; }).join('') + '</div>';
   }
   function titleHtml(t) { return '<h2 id="wps-title" class="wps-title" tabindex="-1">' + esc(t) + '</h2>'; }
+  // The intro names what each step covers (intro.items), falling back to the step titles.
   function introHtml() {
-    var li = '';
+    var li = '', items = CONTENT.intro.items, n = 0;
     for (var k = 0; k < steps.length; k++) {
       if (steps[k].type === 'finish') continue;
-      li += '<li><span class="wps-num">' + (k + 1) + '</span><span>' + hl(esc(steps[k].title)) + '</span></li>';
+      li += '<li><span class="wps-num">' + (n + 1) + '</span><span>' + hl(esc(items && items[n] ? items[n] : steps[k].title)) + '</span></li>';
+      n++;
     }
     return titleHtml(CONTENT.intro.title) + copyHtml(CONTENT.intro.body) + '<ol class="wps-steps">' + li + '</ol>';
   }
@@ -542,7 +573,11 @@ body[class*="octopus"] #wondle-pre-scan{
   function stepHtml(step) {
     if (step.type === 'finish') {
       return titleHtml(step.title) + '<div class="wps-copy wps-sendoff">'
-        + step.lines.map(function (l) { return '<p class="wps-line">' + fmt(l) + '</p>'; }).join('') + '</div>';
+        + step.lines.map(function (l) { return '<p class="wps-line">' + fmt(l) + '</p>'; }).join('') + '</div>'
+        + '<div class="wps-ack" role="group" aria-label="' + esc(step.title) + '">'
+        + '<button type="button" class="wps-choice wps-ack-yes" data-act="ack" aria-pressed="false" disabled><span class="wps-dot" aria-hidden="true"></span><span>' + esc(step.confirm || 'I understand.') + '</span></button>'
+        + '<button type="button" class="wps-again" data-act="again" disabled>' + esc(step.repeat || 'Run through it again.') + '</button>'
+        + '</div>';
     }
     var s = titleHtml(step.title) + copyHtml(step.body);
     s += '<p class="wps-q">' + fmt(step.question) + '</p>';
@@ -577,7 +612,7 @@ body[class*="octopus"] #wondle-pre-scan{
     // The intro and the send-off have no question, so their button waits until the reading is done.
     if (!step || finish) {
       st.ready = false;
-      st.timer = setTimeout(guard(function () { st.ready = true; syncPrimary(); }), reducedMotion() ? 1500 : swept);
+      st.timer = setTimeout(guard(function () { st.ready = true; showAck(); syncPrimary(); }), reducedMotion() ? 1500 : swept);
     }
     // On a small screen the Yes/No box can start below the fold: glide to it once the reading is done.
     if (step && step.type === 'yesno') st.timer2 = setTimeout(guard(showAsk), reducedMotion() ? 0 : swept);
@@ -589,7 +624,7 @@ body[class*="octopus"] #wondle-pre-scan{
   }
   function go(i) {
     clearTimeout(st.timer); clearTimeout(st.timer2);
-    st.i = i; st.solved = false; st.selected = {}; st.seen = {}; st.panel = 0; st.busy = false;
+    st.i = i; st.solved = false; st.selected = {}; st.seen = {}; st.panel = 0; st.busy = false; st.acked = false;
     render();
   }
 
@@ -624,7 +659,7 @@ body[class*="octopus"] #wondle-pre-scan{
   function syncPrimary() {
     var b = ui.primary, step = current();
     if (!step) { b.textContent = CONTENT.intro.cta; b.disabled = !st.ready; return; }
-    if (step.type === 'finish') { b.textContent = step.cta || 'Start scan'; b.disabled = !st.ready; return; }
+    if (step.type === 'finish') { b.textContent = step.cta || 'Start scan'; b.disabled = !st.acked; return; }
     if (step.type === 'select' && !st.solved) { b.textContent = step.check; b.disabled = false; return; }
     b.textContent = st.i === steps.length ? (step.cta || 'Start scan') : 'Continue';
     b.disabled = !st.solved;
@@ -789,10 +824,50 @@ body[class*="octopus"] #wondle-pre-scan{
   function primary() {
     var step = current();
     if (!step) { go(1); return; }
-    if (step.type === 'finish') { if (st.ready) complete(); return; }
+    if (step.type === 'finish') { if (st.acked) complete(); return; }
     if (step.type === 'select' && !st.solved) { checkSelect(step); return; }
     if (!st.solved) return;
     if (st.i === steps.length) complete(); else go(st.i + 1);
+  }
+
+  // Send-off: the two choices appear once the last point has been read.
+  function showAck() {
+    var a = ui.body.querySelector('.wps-ack');
+    if (!a) return;
+    a.classList.add('is-ready');
+    var b = a.querySelectorAll('button');
+    for (var k = 0; k < b.length; k++) b[k].disabled = false;
+    ui.body.scrollTo({ top: ui.body.scrollHeight, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }
+  function acknowledge() {
+    if (!st.ready || st.acked) return;
+    var y = ui.body.querySelector('.wps-ack-yes');
+    st.acked = true;
+    y.classList.add('is-on');
+    y.setAttribute('aria-pressed', 'true');
+    track({ action: 'acknowledge', repeats: st.repeats });
+    syncPrimary();
+    ui.primary.focus();
+  }
+  function again() {
+    if (!st.ready) return;
+    st.repeats++;
+    track({ action: 'repeat', repeats: st.repeats });
+    go(1);
+  }
+  // Adds the acknowledgement to the scan form as hidden fields (replacing any from an earlier try).
+  function stamp(form) {
+    var name = cfg.field || 'prescan', old = form.querySelectorAll('input[data-wps-field]'), k, f, el;
+    for (k = 0; k < old.length; k++) old[k].parentNode.removeChild(old[k]);
+    f = { completed: '1', version: CONTENT.version, acknowledged_at: new Date().toISOString(), repeats: String(st.repeats) };
+    for (k in f) {
+      el = document.createElement('input');
+      el.type = 'hidden';
+      el.name = name + '[' + k + ']';
+      el.value = f[k];
+      el.setAttribute('data-wps-field', '');
+      form.appendChild(el);
+    }
   }
 
   function zoom(i) {
@@ -820,8 +895,11 @@ body[class*="octopus"] #wondle-pre-scan{
     if (st.trigger && st.trigger.focus) st.trigger.focus();
   }
   function complete() {
+    var form = cfg.form || (st.trigger && st.trigger.form);
     st.passed = true;
-    track({ action: 'complete' });
+    // A failed stamp must not stop the scan: it goes ahead without the fields instead.
+    try { if (form) stamp(form); } catch (err) { track({ action: 'error', message: 'stamp: ' + String((err && err.message) || err) }); }
+    track({ action: 'complete', repeats: st.repeats });
     unzoom();
     root.hidden = true;
     lockScroll(false);
@@ -872,6 +950,7 @@ body[class*="octopus"] #wondle-pre-scan{
 (function () {
   var body = document.body, form = document.getElementById('hx-form'), btn = document.getElementById('start-scan');
   var started = document.getElementById('hx-started'), bW = document.getElementById('hx-wondle'), bO = document.getElementById('hx-octopus');
+  var upload = document.getElementById('upload-now');
   body.classList.add('hx-on');
 
   function theme(name) {
@@ -879,6 +958,7 @@ body[class*="octopus"] #wondle-pre-scan{
     body.classList.add('website-' + name);
     bW.setAttribute('aria-pressed', String(name === 'wondle'));
     bO.setAttribute('aria-pressed', String(name === 'octopus'));
+    upload.hidden = name === 'octopus'; // Octopus: Scan Now only (partner upload_type = 'standard')
     try { localStorage.setItem('wps-theme', name); } catch (e) {}
   }
   var initial = 'wondle';
@@ -897,6 +977,9 @@ body[class*="octopus"] #wondle-pre-scan{
     document.getElementById('hx-started-p').textContent = manual
       ? 'Upload Now skips the checks. In the live app the manual upload screen opens here.'
       : 'In the live app the form submits at this point: one credit is used and the camera opens.';
+    var sent = form.querySelectorAll('input[data-wps-field]'), list = [];
+    for (var k = 0; k < sent.length; k++) list.push(sent[k].name + ' = ' + sent[k].value);
+    document.getElementById('hx-sent').textContent = list.length ? 'Saved with the scan:\n' + list.join('\n') : (manual ? '' : 'No acknowledgement sent.');
     form.hidden = true;
     started.hidden = false;
   });
