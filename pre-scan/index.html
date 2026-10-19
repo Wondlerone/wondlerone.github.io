@@ -320,7 +320,7 @@ body[class*="octopus"] #wondle-pre-scan{
      An option's points name the highlighted phrases it relates to; tapping it re-pops
      them, red for a wrong answer and green for a right one. */
   var CONTENT = {
-    version: '2026-10-19.2',
+    version: '2026-10-19.3',
     imgBase: 'img/prescan/', // live: '/themes/wondle/img/prescan/'
     showSlotIds: true, // prototype only: labels each image slot to match the shot list
     intro: {
@@ -768,8 +768,8 @@ body[class*="octopus"] #wondle-pre-scan{
       syncPrimary();
     }
   }
-  // findAll steps: each tap shows that image's own explanation, right or wrong. Once every right
-  // image has been found, the step moves on by itself after time to read the last explanation.
+  // findAll steps: each tap enlarges that image with its own explanation, right or wrong, then it
+  // goes back. The last right one stays enlarged and the step moves on once it has been read.
   function see(step, i, o, el) {
     var k, text = o.feedback || step.success;
     if (st.busy) return;
@@ -783,11 +783,10 @@ body[class*="octopus"] #wondle-pre-scan{
     st.solved = true;
     for (k = 0; k < step.options.length; k++) if (step.options[k].correct && !st.seen[k]) st.solved = false;
     syncPrimary();
-    if (o.correct) reveal(el); else peek(el);
-    if (st.solved) {
-      st.busy = true;
-      st.timer2 = setTimeout(guard(function () { go(st.i + 1); }), Math.max(1800, String(text).length * READ_MS + 600));
-    }
+    if (!st.solved) { peek(el); return; }
+    feature(el);
+    st.busy = true;
+    st.timer2 = setTimeout(guard(function () { go(st.i + 1); }), Math.max(1800, String(text).length * READ_MS + 600));
   }
   // Grows an image out of its tile to fill the step, settling just above its explanation
   // (or, with on = false, shrinks it back into the grid).
