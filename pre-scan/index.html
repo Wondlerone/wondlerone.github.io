@@ -146,6 +146,27 @@ body[class*="octopus"] #wondle-pre-scan{
 #wondle-pre-scan .wps-sendoff p{font-size:19px; line-height:1.7}
 .wps-line{animation:wps-line-in .5s ease-out var(--wps-delay,0s) both}
 @keyframes wps-line-in{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+/* Report mock: matches the driver's report, a round green tick and red cross per finding. */
+.wps-report{display:flex; flex-direction:column; gap:12px}
+.wps-ritem{display:flex; gap:12px; padding:10px; border:1px solid var(--wps-line); border-radius:12px; background:var(--wps-surface); transition:opacity .2s}
+.wps-rimg{flex:none; width:104px; height:104px; overflow:hidden; border-radius:8px; background:var(--wps-soft)}
+.wps-rimg img{display:block; width:100%; height:100%; object-fit:cover; transition:filter .2s}
+.wps-rinfo{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px}
+#wondle-pre-scan .wps-rinfo p{margin:0; font-size:16px; line-height:1.35; font-weight:700; color:var(--wps-text)}
+#wondle-pre-scan .wps-rinfo p span{display:block; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--wps-sub)}
+.wps-ract{display:flex; align-items:center; gap:10px; margin-top:auto; padding-top:8px}
+#wondle-pre-scan .wps-rbtn{appearance:none; display:grid; place-items:center; width:44px; height:44px; margin:0; padding:0; border:0; border-radius:50%; color:#ffffff; cursor:pointer; transition:opacity .2s, transform .15s}
+#wondle-pre-scan .wps-rbtn svg{width:20px; height:20px}
+#wondle-pre-scan .wps-rbtn--keep{background:#18af3b}
+#wondle-pre-scan .wps-rbtn--remove{background:#ed1b26}
+#wondle-pre-scan .wps-rbtn:active{transform:scale(.92)}
+.wps-rstate{display:none; padding:4px 10px; border-radius:999px; color:#ffffff; font-size:14px; font-weight:800}
+.is-accepted .wps-rstate{display:inline-block; background:#18af3b}
+.is-deleted .wps-rstate{display:inline-block; background:#ed1b26}
+#wondle-pre-scan .is-accepted .wps-rbtn--keep,#wondle-pre-scan .is-deleted .wps-rbtn--remove{display:none} /* as on the report: only the other choice stays */
+.wps-ritem.is-accepted{border-color:#18af3b}
+.wps-ritem.is-deleted{border-color:#ed1b26; background:var(--wps-soft)}
+.is-deleted .wps-rimg img{filter:grayscale(1); opacity:.6}
 /* Send-off choices: hidden until the last point has been read. */
 .wps-ack{display:flex; flex-direction:column; gap:10px; margin-top:6px; opacity:0; transform:translateY(8px); transition:opacity .4s ease-out, transform .4s ease-out}
 .wps-ack.is-ready{opacity:1; transform:none}
@@ -320,13 +341,13 @@ body[class*="octopus"] #wondle-pre-scan{
      An option's points name the highlighted phrases it relates to; tapping it re-pops
      them, red for a wrong answer and green for a right one. */
   var CONTENT = {
-    version: '2026-10-19.3',
+    version: '2026-10-19.4',
     imgBase: 'img/prescan/', // live: '/themes/wondle/img/prescan/'
     showSlotIds: true, // prototype only: labels each image slot to match the shot list
     intro: {
       title: 'Before you scan',
-      body: ['We’ll show you how to photograph your car for the scan.', 'There are four short steps, each with a quick question. It takes about a minute.'],
-      items: ['The right conditions', 'Photographing a panel', 'The damage question', 'Close-ups of damage'],
+      body: ['We’ll show you how to photograph your car for the scan.', 'There are five short steps, each with a quick question. It takes about a minute.'],
+      items: ['The right conditions', 'Photographing a panel', 'The damage question', 'Close-ups of damage', 'Checking your report'],
       cta: 'Start'
     },
     steps: [
@@ -389,6 +410,21 @@ body[class*="octopus"] #wondle-pre-scan{
         ]
       },
       {
+        id: 'report', type: 'report', // a mock of the report: every finding gets a tick or a cross; any choice is fine
+        title: 'You check our report',
+        body: ['Once you get your report, you can *remove anything you don’t agree with*.', 'Tap the tick to keep a finding, or the cross to delete it.'],
+        question: 'Try it on these two.',
+        hint: 'Tap the tick or the cross on each one.',
+        points: ['remove anything you don’t agree with'],
+        options: [
+          { slot: '5A', img: '3-chips.webp', alt: 'Small chips on a black door', panel: 'Front door', damage: 'Chips' },
+          { slot: '5B', img: '3-scrape.webp', alt: 'Scrape along a wheel arch', panel: 'Rear wheel arch', damage: 'Scrape' }
+        ],
+        accepted: 'Accepted. It stays on your report.',
+        deleted: 'Deleted. It comes off your report.',
+        success: 'Perfect. That’s all it takes. Whatever you delete comes off your report.'
+      },
+      {
         id: 'sendoff', type: 'finish', // no question: the points appear one at a time, then Start scan unlocks
         title: 'Before you scan, remember:',
         lines: [
@@ -405,6 +441,7 @@ body[class*="octopus"] #wondle-pre-scan{
   };
 
   var ICON_ZOOM = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 13l4.5 4.5M8.5 6v5M6 8.5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  var ICON_TICK = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var ICON_CLOSE = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
   // The version query makes browsers fetch a replaced photo instead of a cached copy.
@@ -505,6 +542,7 @@ body[class*="octopus"] #wondle-pre-scan{
     else if (act === 'opt') choose(i);
     else if (act === 'yes' || act === 'no') answer(i, act === 'yes');
     else if (act === 'zoom') zoom(i);
+    else if (act === 'keep' || act === 'remove') decide(i, act === 'keep');
     else if (act === 'ack') acknowledge();
     else if (act === 'again') again();
     else if (act === 'unzoom') unzoom();
@@ -571,6 +609,16 @@ body[class*="octopus"] #wondle-pre-scan{
       + '<button type="button" class="wps-zoomb" data-act="zoom" data-i="' + i + '" aria-label="Enlarge: ' + esc(o.alt) + '">' + ICON_ZOOM + '</button>'
       + '</div>';
   }
+  // report steps: one finding as it appears in the driver's report, with its tick and cross.
+  function reportItem(o, i) {
+    return '<div class="wps-ritem" data-i="' + i + '">'
+      + '<div class="wps-rimg">' + media(o) + '</div>'
+      + '<div class="wps-rinfo"><p><span>Panel</span>' + esc(o.panel) + '</p><p><span>Damage</span>' + esc(o.damage) + '</p>'
+      + '<div class="wps-ract">'
+      + '<button type="button" class="wps-rbtn wps-rbtn--keep" data-act="keep" data-i="' + i + '" aria-label="This looks right: keep">' + ICON_TICK + '</button>'
+      + '<button type="button" class="wps-rbtn wps-rbtn--remove" data-act="remove" data-i="' + i + '" aria-label="This doesn’t look right: delete">' + ICON_CLOSE + '</button>'
+      + '<span class="wps-rstate" aria-live="polite"></span></div></div></div>';
+  }
   function textOpt(o, i) {
     return '<div class="wps-opt wps-opt--text" data-i="' + i + '"><button type="button" class="wps-choice" data-act="opt" data-i="' + i + '">'
       + '<span class="wps-dot" aria-hidden="true"></span><span>' + esc(o.label) + '</span></button></div>';
@@ -587,6 +635,7 @@ body[class*="octopus"] #wondle-pre-scan{
     var s = titleHtml(step.title) + copyHtml(step.body);
     s += '<p class="wps-q">' + fmt(step.question) + '</p>';
     if (step.hint) s += '<p class="wps-hint">' + esc(step.hint) + '</p>';
+    if (step.type === 'report') return s + '<div class="wps-report">' + step.options.map(reportItem).join('') + '</div>';
     if (step.type === 'yesno') return s + '<div class="wps-panel' + (st.panel ? ' is-ready' : '') + '">' + panelHtml(step, st.panel) + '</div>';
     if (step.layout === 'list') {
       s += '<div class="wps-choices">' + step.options.map(textOpt).join('') + '</div>';
@@ -862,6 +911,23 @@ body[class*="octopus"] #wondle-pre-scan{
     if (st.i === steps.length) complete(); else go(st.i + 1);
   }
 
+  // report steps: a tick keeps a finding and a cross deletes it. Either is fine, and either can be
+  // changed; Continue unlocks once every finding has one.
+  function decide(i, keep) {
+    var step = current(), el = ui.body.querySelector('.wps-ritem[data-i="' + i + '"]'), k, done = true;
+    if (!step || step.type !== 'report' || !el) return;
+    st.selected[i] = keep ? 'accepted' : 'deleted';
+    el.classList.toggle('is-accepted', keep);
+    el.classList.toggle('is-deleted', !keep);
+    el.querySelector('.wps-rstate').textContent = keep ? 'Accepted' : 'Deleted';
+    track({ action: 'answer', step: step.id, option: step.options[i].slot || String(i), answer: st.selected[i] });
+    point(step.points, true);
+    for (k = 0; k < step.options.length; k++) if (!st.selected[k]) done = false;
+    st.solved = done;
+    setFb('ok', done ? step.success : (keep ? step.accepted : step.deleted));
+    syncPrimary();
+    reveal(el);
+  }
   // Send-off: the two choices appear once the last point has been read.
   function showAck() {
     var a = ui.body.querySelector('.wps-ack');
