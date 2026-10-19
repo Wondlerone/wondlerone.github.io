@@ -320,7 +320,7 @@ body[class*="octopus"] #wondle-pre-scan{
      An option's points name the highlighted phrases it relates to; tapping it re-pops
      them, red for a wrong answer and green for a right one. */
   var CONTENT = {
-    version: '2026-10-19.1',
+    version: '2026-10-19.2',
     imgBase: 'img/prescan/', // live: '/themes/wondle/img/prescan/'
     showSlotIds: true, // prototype only: labels each image slot to match the shot list
     intro: {
@@ -533,6 +533,7 @@ body[class*="octopus"] #wondle-pre-scan{
   // fills as the eye reaches it. On the intro only the step names are paced.
   // Returns the time in ms at which the last highlight has finished.
   var READ_MS = 42;
+  var ASK_DELAY_MS = 3000; // step 3: how long the copy shows before the question and photo appear
   function sweep(highlightsOnly) {
     var scope = ui.body.querySelector('.wps-step'), t = 400, end = 0, node, el, len, mark, dur, line, lastLine = null;
     var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null, false);
@@ -618,11 +619,11 @@ body[class*="octopus"] #wondle-pre-scan{
       st.ready = false;
       st.timer = setTimeout(guard(function () { st.ready = true; showAck(); syncPrimary(); }), reducedMotion() ? 1500 : swept);
     }
-    // The question and photo wait until the copy above has been read, then glide into view.
+    // The question and photo wait a moment so the copy above gets read first, then glide into view.
     if (step && step.type === 'yesno') st.timer2 = setTimeout(guard(function () {
       ui.body.querySelector('.wps-panel').classList.add('is-ready');
       showAsk();
-    }), swept);
+    }), ASK_DELAY_MS);
     setFb(null);
     syncPrimary();
     var t = ui.body.querySelector('.wps-title');
