@@ -129,7 +129,8 @@ body[class*="octopus"] #wondle-pre-scan{
 #wondle-pre-scan .wps-hl.is-flash-bad .wps-hl-fill{background:var(--wps-bad); color:#ffffff}
 @keyframes wps-pop-again{0%,100%{transform:none} 45%{transform:scale(1.1)}}
 /* Yes/No panels: one photo at a time, with the question box as it appears in the scan. */
-.wps-panel{display:flex; flex-direction:column; gap:8px}
+.wps-panel{display:flex; flex-direction:column; gap:8px; visibility:hidden; opacity:0; transform:translateY(12px); transition:opacity .45s ease-out, transform .45s ease-out, visibility 0s .45s}
+.wps-panel.is-ready{visibility:visible; opacity:1; transform:none; transition:opacity .45s ease-out, transform .45s ease-out}
 .wps-opt--panel{animation:wps-in .25s ease-out}
 .wps-photo{overflow:hidden; border-radius:10px; background:var(--wps-soft); aspect-ratio:4 / 3}
 .wps-photo img{display:block; width:100%; height:100%; object-fit:cover}
@@ -152,7 +153,7 @@ body[class*="octopus"] #wondle-pre-scan{
 .wps-ack-yes.is-on .wps-dot{border-color:var(--wps-ok); background:var(--wps-ok)}
 .wps-ack-yes.is-on .wps-dot::before{content:"\2713"}
 #wondle-pre-scan .wps-again{appearance:none; align-self:center; margin:0; padding:10px 12px; border:0; background:none; color:var(--wps-anchor); font-size:16px; font-weight:700; text-decoration:underline; text-underline-offset:3px; cursor:pointer}
-@media (prefers-reduced-motion: reduce){ .wps-ack{transition:none; transform:none} }
+@media (prefers-reduced-motion: reduce){ .wps-ack,.wps-panel{transition:none; transform:none} }
 /* [Yes] in the copy is drawn as the button drivers press during the scan. */
 .wps-yes{display:inline-block; padding:0 11px; border-radius:999px; background:var(--wps-anchor); color:#ffffff; font-size:.9em; font-weight:800; line-height:1.5; white-space:nowrap}
 
@@ -177,15 +178,18 @@ body[class*="octopus"] #wondle-pre-scan{
 .wps-opt.is-missed::after{box-shadow:inset 0 0 0 4px var(--wps-warn)}
 .wps-opt.is-dim{opacity:.45}
 /* Right answer chosen: the other images go and the right one fills the step. */
-#wondle-pre-scan .wps-grid.is-solved > .wps-opt:not(.is-featured){display:none}
-#wondle-pre-scan .wps-grid.is-solved > .wps-opt.is-featured{grid-column:1 / -1; justify-self:center; max-width:100%}
+#wondle-pre-scan .wps-grid.is-focus > .wps-opt:not(.is-featured){display:none}
+#wondle-pre-scan .wps-grid.is-focus > .wps-opt.is-featured{grid-column:1 / -1; justify-self:center; max-width:100%}
 /* Tall photos are capped in height so the featured image still fits above the explanation. */
 #wondle-pre-scan .wps-opt.is-featured .wps-tile{width:auto}
 #wondle-pre-scan .wps-opt.is-featured .wps-tile img{width:auto; max-width:100%; max-height:44vh}
 #wondle-pre-scan .wps-opt.is-featured .wps-zoomb,#wondle-pre-scan .wps-opt.is-featured .wps-id{display:none}
 /* ...and sits at the foot of the step, directly on top of the explanation. */
-#wondle-pre-scan .wps-step.is-solved{min-height:100%}
-#wondle-pre-scan .wps-step.is-solved .wps-grid{margin-top:auto}
+#wondle-pre-scan .wps-step.is-focus{min-height:100%}
+#wondle-pre-scan .wps-step.is-focus .wps-grid{margin-top:auto}
+/* A wrong pick is enlarged for a moment; the bar runs down until it goes back. */
+.wps-opt.is-peek::before{content:""; position:absolute; left:8px; right:8px; bottom:8px; z-index:1; height:4px; border-radius:2px; background:rgba(255,255,255,.9); transform-origin:left; animation:wps-drain var(--wps-peek,3s) linear forwards; pointer-events:none}
+@keyframes wps-drain{from{transform:scaleX(1)} to{transform:scaleX(0)}}
 .wps-id{position:absolute; top:6px; left:6px; padding:2px 6px; border-radius:4px; background:rgba(0,0,0,.55); color:#ffffff; font-size:11px; font-weight:700; letter-spacing:.04em; pointer-events:none}
 .wps-badge{position:absolute; top:6px; right:6px; display:none; place-items:center; width:26px; height:26px; border-radius:50%; color:#ffffff; font-size:15px; font-weight:800; line-height:1; pointer-events:none}
 .is-selected .wps-badge{display:grid; background:var(--wps-anchor)}
@@ -316,7 +320,7 @@ body[class*="octopus"] #wondle-pre-scan{
      An option's points name the highlighted phrases it relates to; tapping it re-pops
      them, red for a wrong answer and green for a right one. */
   var CONTENT = {
-    version: '2026-10-18.1',
+    version: '2026-10-19.1',
     imgBase: 'img/prescan/', // live: '/themes/wondle/img/prescan/'
     showSlotIds: true, // prototype only: labels each image slot to match the shot list
     intro: {
@@ -421,7 +425,7 @@ body[class*="octopus"] #wondle-pre-scan{
   /* ---- Engine ---- */
   var steps = CONTENT.steps, root = null, ui = {}, cfg = {}, st = null;
 
-  function fresh() { return { i: 0, solved: false, selected: {}, seen: {}, panel: 0, busy: false, trigger: null, passed: false, ready: false, acked: false, repeats: 0, timer: 0, timer2: 0 }; }
+  function fresh() { return { i: 0, solved: false, selected: {}, seen: {}, panel: 0, busy: false, trigger: null, passed: false, ready: false, acked: false, repeats: 0, peek: null, timer: 0, timer2: 0 }; }
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
@@ -582,7 +586,7 @@ body[class*="octopus"] #wondle-pre-scan{
     var s = titleHtml(step.title) + copyHtml(step.body);
     s += '<p class="wps-q">' + fmt(step.question) + '</p>';
     if (step.hint) s += '<p class="wps-hint">' + esc(step.hint) + '</p>';
-    if (step.type === 'yesno') return s + '<div class="wps-panel">' + panelHtml(step, st.panel) + '</div>';
+    if (step.type === 'yesno') return s + '<div class="wps-panel' + (st.panel ? ' is-ready' : '') + '">' + panelHtml(step, st.panel) + '</div>';
     if (step.layout === 'list') {
       s += '<div class="wps-choices">' + step.options.map(textOpt).join('') + '</div>';
     } else {
@@ -614,8 +618,11 @@ body[class*="octopus"] #wondle-pre-scan{
       st.ready = false;
       st.timer = setTimeout(guard(function () { st.ready = true; showAck(); syncPrimary(); }), reducedMotion() ? 1500 : swept);
     }
-    // On a small screen the Yes/No box can start below the fold: glide to it once the reading is done.
-    if (step && step.type === 'yesno') st.timer2 = setTimeout(guard(showAsk), reducedMotion() ? 0 : swept);
+    // The question and photo wait until the copy above has been read, then glide into view.
+    if (step && step.type === 'yesno') st.timer2 = setTimeout(guard(function () {
+      ui.body.querySelector('.wps-panel').classList.add('is-ready');
+      showAsk();
+    }), swept);
     setFb(null);
     syncPrimary();
     var t = ui.body.querySelector('.wps-title');
@@ -624,6 +631,8 @@ body[class*="octopus"] #wondle-pre-scan{
   }
   function go(i) {
     clearTimeout(st.timer); clearTimeout(st.timer2);
+    if (st.peek) clearTimeout(st.peek.timer);
+    st.peek = null;
     st.i = i; st.solved = false; st.selected = {}; st.seen = {}; st.panel = 0; st.busy = false; st.acked = false;
     render();
   }
@@ -669,6 +678,7 @@ body[class*="octopus"] #wondle-pre-scan{
     var step = current();
     if (!step) return;
     var o = step.options[i], el = optEl(i);
+    if (st.peek) { unpeek(); return; }
     if (step.findAll) { see(step, i, o, el); return; }
     if (st.solved) return;
     if (step.type === 'select') {
@@ -697,10 +707,9 @@ body[class*="octopus"] #wondle-pre-scan{
       return;
     }
     el.classList.add('is-wrong');
-    shake(el);
     setFb('bad', o.feedback);
     syncPrimary();
-    reveal(el);
+    if (step.layout === 'list') { shake(el); reveal(el); } else peek(el);
   }
   // yesno steps: one photo at a time with the scan's own question on it. A wrong answer stays
   // on that photo until it's put right; a right one moves to the next photo after a moment.
@@ -773,18 +782,19 @@ body[class*="octopus"] #wondle-pre-scan{
     st.solved = true;
     for (k = 0; k < step.options.length; k++) if (step.options[k].correct && !st.seen[k]) st.solved = false;
     syncPrimary();
-    reveal(el);
+    if (o.correct) reveal(el); else peek(el);
     if (st.solved) {
       st.busy = true;
       st.timer2 = setTimeout(guard(function () { go(st.i + 1); }), Math.max(1800, String(text).length * READ_MS + 600));
     }
   }
-  // The right image grows out of its tile to fill the step, settling just above its explanation.
-  function feature(el) {
+  // Grows an image out of its tile to fill the step, settling just above its explanation
+  // (or, with on = false, shrinks it back into the grid).
+  function grow(el, on) {
     var before = el.getBoundingClientRect(), after;
-    el.parentNode.classList.add('is-solved');
-    el.closest('.wps-step').classList.add('is-solved');
-    el.classList.add('is-featured');
+    el.parentNode.classList.toggle('is-focus', on);
+    el.closest('.wps-step').classList.toggle('is-focus', on);
+    el.classList.toggle('is-featured', on);
     after = el.getBoundingClientRect();
     if (!reducedMotion() && el.animate && after.width) {
       el.style.transformOrigin = '0 0';
@@ -793,9 +803,31 @@ body[class*="octopus"] #wondle-pre-scan{
         { transform: 'none' }
       ], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
     }
+  }
+  // The right image stays enlarged.
+  function feature(el) {
+    grow(el, true);
     // The image is the last thing in the step, so scroll to the end. scrollIntoView would
     // measure the mid-animation (tile-sized) box and stop short.
     ui.body.scrollTo({ top: ui.body.scrollHeight, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }
+  // A wrong image is enlarged so the driver can see why, then goes back after PEEK_MS or on a tap.
+  var PEEK_MS = 3000;
+  function peek(el) {
+    grow(el, true);
+    el.classList.add('is-peek');
+    el.style.setProperty('--wps-peek', PEEK_MS + 'ms');
+    ui.body.scrollTo({ top: ui.body.scrollHeight, behavior: reducedMotion() ? 'auto' : 'smooth' });
+    st.peek = { el: el, timer: setTimeout(guard(unpeek), PEEK_MS) };
+  }
+  function unpeek() {
+    if (!st.peek) return;
+    var el = st.peek.el;
+    clearTimeout(st.peek.timer);
+    st.peek = null;
+    el.classList.remove('is-peek');
+    grow(el, false);
+    reveal(el);
   }
   // Feedback grows the bottom bar, which can cover the option just tapped.
   function reveal(el) { if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); }
