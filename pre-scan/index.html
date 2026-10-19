@@ -1,4 +1,4 @@
-<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Wondle pre-scan bootcamp</title><meta name="robots" content="noindex, nofollow"><meta property="og:title" content="Wondle pre-scan bootcamp"><meta property="og:description" content="Prototype: four quick steps before you scan."><meta property="og:image" content="https://wondlerone.github.io/pre-scan/preview.jpg"><meta property="og:type" content="website"><style>body{margin:0}[hidden]{display:none!important}</style></head><body><style>
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Wondle pre-scan bootcamp</title><meta name="robots" content="noindex, nofollow"><meta property="og:title" content="Wondle pre-scan bootcamp"><meta property="og:description" content="Prototype: five short steps before you scan."><meta property="og:image" content="https://wondlerone.github.io/pre-scan/preview.jpg"><meta property="og:type" content="website"><style>body{margin:0}[hidden]{display:none!important}</style></head><body><style>
 /* ============================================================
    HARNESS: stands in for templates/scan-customer.blade.php so the
    checks can be tried on a phone. Not part of the hand-off.
@@ -1057,11 +1057,16 @@ body[class*="octopus"] #wondle-pre-scan{
     bW.setAttribute('aria-pressed', String(name === 'wondle'));
     bO.setAttribute('aria-pressed', String(name === 'octopus'));
     upload.hidden = name === 'octopus'; // Octopus: Scan Now only (partner upload_type = 'standard')
-    try { localStorage.setItem('wps-theme', name); } catch (e) {}
+    if (!window.WPS_DEMO_BRAND) try { localStorage.setItem('wps-theme', name); } catch (e) {}
   }
   var initial = 'wondle';
   try { initial = localStorage.getItem('wps-theme') || initial; } catch (e) {}
   if (location.hash === '#octopus' || location.hash === '#wondle') initial = location.hash.slice(1);
+  // A shared demo link can fix the brand (window.WPS_DEMO_BRAND): no switch, and nothing remembered.
+  if (window.WPS_DEMO_BRAND) {
+    initial = window.WPS_DEMO_BRAND;
+    document.querySelector('.hx-seg').hidden = true;
+  }
   theme(initial);
   bW.addEventListener('click', function () { theme('wondle'); });
   bO.addEventListener('click', function () { theme('octopus'); });
